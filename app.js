@@ -1,7 +1,7 @@
 /* ==========================================================================
    LÍNEA MITRE - SISTEMA DE BOLETAJE DIGITAL PREPAGO (AFC OPEN-LOOP)
    Application Logic & Cryptographic TOTP Engine
-   (Abonos, Devoluciones y Certificados Oficiales)
+   (Vercel & Multi-Browser Compatible)
    ========================================================================== */
 
 // 1. DATA: STATIONS & FARES FOR LÍNEA MITRE BRANCHES
@@ -73,6 +73,17 @@ let qrCodeInstance = null;
 let certQrInstance = null;
 const TOTP_PERIOD = 15;
 const DEVICE_FINGERPRINT = "MITRE_DEVICE_HASH_8F91A7";
+
+// Helper: Safe UUID generation for Vercel/mobile compatibility
+function safeUUID() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
 
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
@@ -155,7 +166,7 @@ function initPassengerForm() {
         const modeData = TICKET_TYPES_DATA[modeKey];
         
         let rawTotal = singleFare * modeData.trips;
-        if (modeKey === 'estudiantil') rawTotal = singleFare * 30; // base 30 trips calculation
+        if (modeKey === 'estudiantil') rawTotal = singleFare * 30;
 
         const discountPct = modeData.discount;
         const finalAmount = rawTotal * (1 - discountPct);
@@ -191,7 +202,7 @@ function initPassengerForm() {
         const fareText = document.getElementById("fare-amount").textContent;
 
         currentTicket = {
-            uuid: crypto.randomUUID(),
+            uuid: safeUUID(),
             typeKey: modeKey,
             typeLabel: modeData.label,
             tripsRemaining: modeData.trips === 999 ? "Ilimitados (30 días)" : `${modeData.trips} viajes`,
@@ -259,15 +270,33 @@ async function updateTotpQR() {
     qrContainer.innerHTML = "";
 
     if (typeof QRCode !== "undefined") {
-        qrCodeInstance = new QRCode(qrContainer, {
-            text: qrPayload,
-            width: 180,
-            height: 180,
-            colorDark: "#0d1117",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.M
-        });
+        try {
+            qrCodeInstance = new QRCode(qrContainer, {
+                text: qrPayload,
+                width: 180,
+                height: 180,
+                colorDark: "#0d1117",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch (e) {
+            renderFallbackQR(qrContainer, shortSignature);
+        }
+    } else {
+        renderFallbackQR(qrContainer, shortSignature);
     }
+}
+
+// Visual QR Fallback if CDN is adblocked
+function renderFallbackQR(container, signature) {
+    container.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; justify-center:center; width:180px; height:180px; background:#0d1117; color:#38bdf8; border-radius:12px; border:2px solid #2f81f7; padding:12px; box-sizing:border-box; text-align:center;">
+            <div style="font-size:2rem; margin-bottom:4px;">📱</div>
+            <div style="font-size:0.75rem; font-weight:bold; color:#fff;">TOKEN TOTP QR</div>
+            <div style="font-size:0.65rem; font-family:monospace; margin-top:6px; background:rgba(47,129,247,0.2); padding:4px 8px; border-radius:4px;">0x${signature}</div>
+            <div style="font-size:0.6rem; color:#8b949e; margin-top:auto;">VÁLIDO EN PATRULLA</div>
+        </div>
+    `;
 }
 
 // --------------------------------------------------------------------------
@@ -277,7 +306,6 @@ function initRefundsAndCertificates() {
     const refundForm = document.getElementById("refund-form");
     const btnGenerateCert = document.getElementById("btn-generate-cert");
 
-    // Handle Refund Submission
     refundForm.addEventListener("submit", (e) => {
         e.preventDefault();
         const ticketSelect = document.getElementById("refund-ticket-select");
@@ -303,14 +331,12 @@ function initRefundsAndCertificates() {
         document.getElementById("refund-status-text").textContent = `Se ha procesado exitosamente la devolución de ${targetTicket ? targetTicket.amountPaid : '$480,00 ARS'} a tu billetera de origen.`;
         refundBox.classList.remove("hidden");
 
-        // Increment KPI
         const kpiRefunds = document.getElementById("kpi-refunds-count");
         kpiRefunds.textContent = parseInt(kpiRefunds.textContent, 10) + 1;
 
         updateRefundDropdown();
     });
 
-    // Handle Certificate Generation
     btnGenerateCert.addEventListener("click", () => {
         const pName = document.getElementById("cert-passenger-name").value.trim() || "Santiago Rodríguez";
         const pDni = document.getElementById("cert-passenger-dni").value.trim() || "38.912.401";
@@ -336,18 +362,23 @@ function initRefundsAndCertificates() {
         const hashCert = "SHA256-SOFSE-" + Math.random().toString(36).substring(2, 8).toUpperCase();
         document.getElementById("cert-hash-code").textContent = `Hash: ${hashCert}`;
 
-        // Render QR verification code in certificate
         const certQrBox = document.getElementById("cert-qr-container");
         certQrBox.innerHTML = "";
         if (typeof QRCode !== "undefined") {
-            certQrInstance = new QRCode(certQrBox, {
-                text: `https://argentina.gob.ar/validador-mitre?cert=${hashCert}&dni=${pDni}`,
-                width: 70,
-                height: 70,
-                colorDark: "#1f6beb",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.L
-            });
+            try {
+                certQrInstance = new QRCode(certQrBox, {
+                    text: `https://argentina.gob.ar/validador-mitre?cert=${hashCert}&dni=${pDni}`,
+                    width: 70,
+                    height: 70,
+                    colorDark: "#1f6beb",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.L
+                });
+            } catch (e) {
+                certQrBox.innerHTML = `<div style="font-size:0.6rem; font-family:monospace; color:#1f6beb; text-align:center;">QR VERIFICADO</div>`;
+            }
+        } else {
+            certQrBox.innerHTML = `<div style="font-size:0.6rem; font-family:monospace; color:#1f6beb; text-align:center;">QR VERIFICADO</div>`;
         }
 
         document.getElementById("printable-certificate-box").classList.remove("hidden");
@@ -375,13 +406,26 @@ function updateRefundDropdown() {
     }
 }
 
-// SHA256 Web Crypto Helper
+// SHA256 Web Crypto Helper with fallback
 async function generateSHA256(str) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(str);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    if (typeof crypto !== "undefined" && crypto.subtle && crypto.subtle.digest) {
+        try {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(str);
+            const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+        } catch (e) {
+            // Fallback Hash
+        }
+    }
+    // Simple FNV-1a 32-bit hash fallback for non-crypto contexts
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+        hash ^= str.charCodeAt(i);
+        hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    }
+    return (hash >>> 0).toString(16).padStart(16, "0");
 }
 
 function updateLiveWatermarkClock() {
