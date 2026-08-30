@@ -338,7 +338,7 @@ function initRefundsAndCertificates() {
     });
 
     btnGenerateCert.addEventListener("click", () => {
-        const pName = document.getElementById("cert-passenger-name").value.trim() || "Santiago Rodríguez";
+        const pName = document.getElementById("cert-passenger-name").value.trim() || "Santiago Nehuen Andrade Messali";
         const pDni = document.getElementById("cert-passenger-dni").value.trim() || "38.912.401";
         const delayVal = document.getElementById("cert-delay-minutes").value;
 

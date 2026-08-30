@@ -1,4 +1,5 @@
 # 🚆 Sistema Móvil de Boletaje Digital Prepago (Línea Mitre)
+> **Autor**: Santiago Nehuen Andrade Messali  
 > **Trabajo Final Integrador / Tesis Universitaria**  
 > *Desarrollo de un sistema móvil de boletaje digital prepago para reducir la evasión tarifaria en la Línea Mitre (AMBA)*
 
@@ -137,4 +138,4 @@ Para desplegarlo en Vercel:
 ---
 
 ### ✒️ Autor
-**Tesis Universitaria 2026** — *Línea Mitre AFC Digital Project*
+**Santiago Nehuen Andrade Messali** — *Tesis Universitaria 2026 (Línea Mitre AFC Digital Project)*
