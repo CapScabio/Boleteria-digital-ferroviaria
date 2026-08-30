@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Línea Mitre - Boletaje Digital Prepago (AFC Open-Loop)</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- QRCode.js CDN for live QR rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Header Navigation -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="train-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="4" y="3" width="16" height="16" rx="2" />
+                        <path d="M4 11h16" />
+                        <path d="M12 3v8" />
+                        <circle cx="8" cy="15" r="1" fill="currentColor" />
+                        <circle cx="16" cy="15" r="1" fill="currentColor" />
+                        <path d="M8 19l-2 3" />
+                        <path d="M16 19l2 3" />
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>LÍNEA MITRE</h1>
+                    <span>Boletaje Digital Prepago • Abonos • TOTP Security</span>
+                </div>
+            </div>
+
+            <nav class="nav-tabs">
+                <button class="nav-btn active" data-tab="passenger-tab">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    Comprar Pasaje / Abonos
+                </button>
+                <button class="nav-btn" data-tab="refunds-tab">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                    Devoluciones & Justificantes
+                </button>
+                <button class="nav-btn" data-tab="inspector-tab">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Patrulla Inspector
+                </button>
+                <button class="nav-btn" data-tab="dashboard-tab">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    Dashboard Operativo
+                </button>
+            </nav>
+        </header>
+
+        <!-- Main Workspace Body -->
+        <main class="main-content">
+            
+            <!-- SECTION 1: PASSENGER VIEW (PURCHASE SINGLE & ABONOS) -->
+            <section id="passenger-tab" class="tab-panel active">
+                <div class="passenger-grid">
+                    
+                    <!-- Left: Purchase Form -->
+                    <div class="card purchase-card">
+                        <div class="card-header">
+                            <h2>🎫 Adquisición de Pasajes y Abonos Prepago</h2>
+                            <span class="badge badge-blue">Open-Loop & Descuentos</span>
+                        </div>
+                        <form id="ticket-form">
+                            
+                            <div class="form-group">
+                                <label for="ticket-type-select">Modalidad de Boleto / Abono Anticipado</label>
+                                <select id="ticket-type-select" class="form-control highlight-select">
+                                    <option value="single">🎟️ Viaje Único / Ocasional (Tarifa Regular)</option>
+                                    <option value="semanal">📅 Abono Semanal (10 viajes • 10% Descuento)</option>
+                                    <option value="mensual">🗓️ Abono Mensual (40 viajes • 25% Descuento)</option>
+                                    <option value="trimestral">🏆 Abono Trimestral (120 viajes • 40% Descuento)</option>
+                                    <option value="estudiantil">🎓 Abono Estudiantil / Universitario (50% Descuento)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="branch-select">Ramal de la Línea Mitre</label>
+                                <select id="branch-select" class="form-control">
+                                    <option value="tigre">Retiro - Tigre (Ramal Eléctrico)</option>
+                                    <option value="suarez">Retiro - José León Suárez</option>
+                                    <option value="mitre">Retiro - Bartolomé Mitre</option>
+                                </select>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="origin-select">Estación Origen</label>
+                                    <select id="origin-select" class="form-control">
+                                        <!-- Dynamically populated -->
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="dest-select">Estación Destino</label>
+                                    <select id="dest-select" class="form-control">
+                                        <!-- Dynamically populated -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="payment-method">Medio de Pago Abierto</label>
+                                <select id="payment-method" class="form-control">
+                                    <option value="mp">Billetera Virtual (Mercado Pago / MODO)</option>
+                                    <option value="card">Tarjeta de Débito / Crédito Visa/Mastercard</option>
+                                    <option value="crypto">Lightning / USDT Prepago</option>
+                                </select>
+                            </div>
+
+                            <div class="fare-summary">
+                                <div class="fare-item">
+                                    <span>Distancia / Tramo:</span>
+                                    <strong id="fare-dist">0 km (0 secciones)</strong>
+                                </div>
+                                <div class="fare-item">
+                                    <span>Descuento Aplicado:</span>
+                                    <strong id="fare-discount-label" class="text-green">0% (Ninguno)</strong>
+                                </div>
+                                <div class="fare-item total">
+                                    <span>Monto Total a Abonar:</span>
+                                    <strong id="fare-amount">$320,00 ARS</strong>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block">
+                                🔒 Confirmar Pago y Emitir Pasaje / Abono
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Right: Dynamic Ticket Screen -->
+                    <div class="card ticket-card">
+                        <div class="card-header">
+                            <h2>📱 Pasaje / Abono Activo en Pantalla</h2>
+                            <span class="badge badge-green" id="ticket-status-badge">ACTIVO</span>
+                        </div>
+
+                        <div id="no-ticket-view" class="empty-state">
+                            <div class="empty-icon">🎟️</div>
+                            <h3>Sin pasaje prepago generado</h3>
+                            <p>Selecciona origen, destino o modalidad de abono para desplegar tu token digital criptográfico TOTP.</p>
+                        </div>
+
+                        <div id="active-ticket-view" class="ticket-view hidden">
+                            <div class="ticket-header-info">
+                                <div class="ticket-type-tag" id="ticket-type-display">BOLETO ÚNICO</div>
+                                <div class="ticket-route">
+                                    <span id="ticket-orig-display">Retiro</span>
+                                    <span class="route-arrow">➔</span>
+                                    <span id="ticket-dest-display">Tigre</span>
+                                </div>
+                                <div class="ticket-branch-sub" id="ticket-branch-display">Ramal Retiro - Tigre</div>
+                            </div>
+
+                            <!-- DYNAMIC QR CONTAINER WITH ANTI-SCREENSHOT ROTATION -->
+                            <div class="qr-wrapper">
+                                <div class="qr-scan-bar"></div>
+                                <div id="qrcode-container"></div>
+                                <div class="qr-watermark" id="watermark-timer">00:00:00</div>
+                            </div>
+
+                            <div class="totp-timer-bar">
+                                <div class="timer-label">
+                                    <span>Token TOTP (HMAC-SHA256)</span>
+                                    <strong id="timer-countdown">15s</strong>
+                                </div>
+                                <div class="progress-bg">
+                                    <div class="progress-fill" id="timer-progress"></div>
+                                </div>
+                            </div>
+
+                            <div class="ticket-meta">
+                                <div class="meta-row">
+                                    <span>UUID Pasaje:</span>
+                                    <code id="ticket-uuid-display">a1b2c3d4...</code>
+                                </div>
+                                <div class="meta-row">
+                                    <span>Saldo / Viajes Restantes:</span>
+                                    <strong id="ticket-balance-display" class="text-green">1 / 1 viaje</strong>
+                                </div>
+                                <div class="meta-row">
+                                    <span>Firma Criptográfica:</span>
+                                    <code id="ticket-hash-display">0x8F92...</code>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- SECTION 2: REFUNDS & OFFICIAL DELAY CERTIFICATES -->
+            <section id="refunds-tab" class="tab-panel">
+                <div class="passenger-grid">
+                    
+                    <!-- Left: Refund Request Form -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>💸 Devolución Automática de Pasaje</h2>
+                            <span class="badge badge-yellow">Garantía de Servicio</span>
+                        </div>
+                        <p class="section-desc">
+                            Si tu formación se canceló o sufrió un atraso superior a 15 minutos, solicita la restitución inmediata del 100% del importe abonado a tu billetera virtual.
+                        </p>
+
+                        <form id="refund-form" style="margin-top: 1rem;">
+                            <div class="form-group">
+                                <label for="refund-ticket-select">Seleccionar Pasaje o Abono Afectado</label>
+                                <select id="refund-ticket-select" class="form-control">
+                                    <option value="">-- No hay pasajes activos para solicitar reembolso --</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="refund-reason-select">Motivo de la Solicitud</label>
+                                <select id="refund-reason-select" class="form-control">
+                                    <option value="delay">⏱️ Demora de formación mayor a 15 minutos</option>
+                                    <option value="cancelled">🚫 Cancelación total del servicio en ramal</option>
+                                    <option value="strike">⚠️ Medida de fuerza / Cierre de estación</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="refund-comments">Observaciones (Opcional)</label>
+                                <input type="text" id="refund-comments" class="form-control" placeholder="Ej: Varado en Estación San Isidro a las 18:30 hs">
+                            </div>
+
+                            <button type="submit" class="btn btn-warning btn-block" id="btn-submit-refund">
+                                🔄 Procesar Reembolso Inmediato (100%)
+                            </button>
+                        </form>
+
+                        <div id="refund-status-box" class="refund-result-box hidden">
+                            <div class="refund-status-icon">✨</div>
+                            <h4>Devolución Aprobada e Integrada</h4>
+                            <p id="refund-status-text">Se han reintegrado $480,00 ARS a tu billetera de origen.</p>
+                        </div>
+                    </div>
+
+                    <!-- Right: Official Delay Certificate Generator -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>📜 Justificante Oficial de Demora / Cancelación</h2>
+                            <span class="badge badge-purple">Validez Laboral / Escolar</span>
+                        </div>
+                        <p class="section-desc">
+                            Genera un certificado digital con firma institucional comprobable mediante QR para presentar en tu trabajo, universidad o escuela cuando el tren se atrase más de 15 minutos.
+                        </p>
+
+                        <div class="certificate-form-box" style="margin-top: 1rem;">
+                            <div class="form-group">
+                                <label for="cert-passenger-name">Nombre y Apellido del Pasajero</label>
+                                <input type="text" id="cert-passenger-name" class="form-control" value="Santiago Rodríguez">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cert-passenger-dni">DNI / Documento</label>
+                                <input type="text" id="cert-passenger-dni" class="form-control" value="38.912.401">
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="cert-delay-minutes">Minutos de Atraso Registrados</label>
+                                    <select id="cert-delay-minutes" class="form-control">
+                                        <option value="25">25 Minutos de Atraso (Formación #3021)</option>
+                                        <option value="45">45 Minutos de Atraso (Formación #3045)</option>
+                                        <option value="cancelled">Formación Cancelada (Sin Servicio)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cert-destination-entity">Destinado a (Trabajo / Colegio)</label>
+                                    <input type="text" id="cert-destination-entity" class="form-control" placeholder="Ej: Empresa / Universidad">
+                                </div>
+                            </div>
+
+                            <button id="btn-generate-cert" class="btn btn-primary btn-block">
+                                📑 Generar Certificado Oficial Firmado
+                            </button>
+                        </div>
+
+                        <!-- Printable Certificate Document Box -->
+                        <div id="printable-certificate-box" class="certificate-document hidden">
+                            <div class="cert-header">
+                                <div class="cert-logo">🚆 TRENES ARGENTINOS</div>
+                                <div class="cert-title">CERTIFICADO INSTITUCIONAL DE INTERRUPCIÓN Y DEMORA DE SERVICIO</div>
+                            </div>
+                            <div class="cert-body">
+                                <p>Por la presente, la <strong>Operadora Ferroviaria Sociedad del Estado (SOFSE) - Línea Mitre</strong> certifica que el pasajero/a:</p>
+                                <div class="cert-data-grid">
+                                    <div><strong>Pasajero/a:</strong> <span id="cert-out-name">Santiago Rodríguez</span></div>
+                                    <div><strong>DNI:</strong> <span id="cert-out-dni">38.912.401</span></div>
+                                    <div><strong>Ramal Afectado:</strong> <span id="cert-out-branch">Retiro - Tigre</span></div>
+                                    <div><strong>Tramo:</strong> <span id="cert-out-route">Retiro ➔ Tigre</span></div>
+                                    <div><strong>Fecha y Hora:</strong> <span id="cert-out-datetime">23/08/2026 19:15 hs</span></div>
+                                    <div><strong>Novedad Operativa:</strong> <strong id="cert-out-status" class="text-red">Demora registrada de 25 minutos</strong></div>
+                                </div>
+                                <p class="cert-legal-text">
+                                    El presente documento se expide a solicitud del interesado para ser presentado ante las autoridades laborales, académicas o institucionales que lo requieran (`Art. 14 Ley de Transporte`).
+                                </p>
+                            </div>
+                            <div class="cert-footer">
+                                <div class="cert-qr-validation" id="cert-qr-container"></div>
+                                <div class="cert-signature-box">
+                                    <div class="cert-seal">SELLO DIGITAL OFICIAL SOFSE</div>
+                                    <small id="cert-hash-code">Hash: SHA256-SOFSE-9812A4</small>
+                                </div>
+                            </div>
+                            <button onclick="window.print()" class="btn btn-success btn-block" style="margin-top: 1rem;">
+                                🖨️ Imprimir / Descargar PDF del Certificado
+                            </button>
+                        </div>
+
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- SECTION 3: INSPECTOR / ON-BOARD PATROL VIEW -->
+            <section id="inspector-tab" class="tab-panel">
+                <div class="inspector-grid">
+                    
+                    <div class="card scanner-card">
+                        <div class="card-header">
+                            <h2>🔍 Dispositivo de Patrulla a Bordo</h2>
+                            <span class="badge badge-purple">Inspección en Movimiento</span>
+                        </div>
+
+                        <p class="scanner-desc">
+                            Permite al fiscalizador validar el código QR dinámico del pasaje u abono de forma instantánea en movimiento.
+                        </p>
+
+                        <div class="scanner-controls">
+                            <button id="btn-scan-current" class="btn btn-success btn-large">
+                                📷 Escanear Pasaje / Abono Activo
+                            </button>
+                            <button id="btn-scan-expired" class="btn btn-warning btn-large">
+                                ⚠️ Simular QR Expirado
+                            </button>
+                            <button id="btn-scan-tampered" class="btn btn-danger btn-large">
+                                🚫 Simular Captura / Adulterado
+                            </button>
+                        </div>
+
+                        <div class="offline-toggle-box">
+                            <label class="switch-label">
+                                <input type="checkbox" id="offline-mode-toggle">
+                                <span class="slider"></span>
+                                <strong>Modo Sin Conexión (Validación Criptográfica Offline)</strong>
+                            </label>
+                            <small>Valida la firma HMAC localmente sin consultar el servidor central.</small>
+                        </div>
+                    </div>
+
+                    <!-- Inspection Result Feedback Screen -->
+                    <div class="card result-card" id="inspection-result-card">
+                        <div class="card-header">
+                            <h2>📋 Resultado de Verificación</h2>
+                            <span class="badge" id="result-badge">ESPERANDO SCAN</span>
+                        </div>
+
+                        <div class="result-display neutral" id="result-display-box">
+                            <div class="result-status-icon" id="result-icon">🔍</div>
+                            <h3 id="result-title">Listo para Escanear</h3>
+                            <p id="result-detail">Pulse uno de los botones para realizar la lectura criptográfica en movimiento.</p>
+                            
+                            <div class="validation-audit-details hidden" id="audit-details">
+                                <hr>
+                                <div class="audit-row">
+                                    <span>Estado en Servidor:</span>
+                                    <strong id="audit-server-state">-</strong>
+                                </div>
+                                <div class="audit-row">
+                                    <span>Verificación HMAC:</span>
+                                    <strong id="audit-hmac-match">-</strong>
+                                </div>
+                                <div class="audit-row">
+                                    <span>Tolerancia Temporal:</span>
+                                    <strong id="audit-time-skew">-</strong>
+                                </div>
+                                <div class="audit-row">
+                                    <span>Modo de Control:</span>
+                                    <strong id="audit-mode">-</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- SECTION 4: OPERATOR DASHBOARD VIEW -->
+            <section id="dashboard-tab" class="tab-panel">
+                <div class="dashboard-grid">
+                    
+                    <div class="kpi-row">
+                        <div class="kpi-card">
+                            <div class="kpi-title">Evasión Estimada Reducida</div>
+                            <div class="kpi-value text-green">-24,5%</div>
+                            <div class="kpi-sub">Meta objetivo: 31,7% ➔ 7,2%</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-title">Pasajes & Abonos Emitidos</div>
+                            <div class="kpi-value" id="kpi-tickets-count">1.642.190</div>
+                            <div class="kpi-sub">Incluye 38% de abonos con descuento</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-title">Solicitudes de Devolución Reintegradas</div>
+                            <div class="kpi-value text-yellow" id="kpi-refunds-count">142</div>
+                            <div class="kpi-sub">Reembolso 100% automático por demoras</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-title">Latencia Backend (p95)</div>
+                            <div class="kpi-value text-purple" id="kpi-latency">42 ms</div>
+                            <div class="kpi-sub">Capacidad: 10.000 req/s</div>
+                        </div>
+                    </div>
+
+                    <div class="card chart-card">
+                        <div class="card-header">
+                            <h2>📊 Distribución de Demanda por Estaciones (Horas Pico Retiro)</h2>
+                        </div>
+                        <div class="station-demand-bars">
+                            <div class="demand-bar-item">
+                                <span class="st-name">Retiro (Cabecera)</span>
+                                <div class="bar-bg"><div class="bar-fill" style="width: 95%;"></div></div>
+                                <span class="st-val">38.400 pas/h</span>
+                            </div>
+                            <div class="demand-bar-item">
+                                <span class="st-name">Belgrano C</span>
+                                <div class="bar-bg"><div class="bar-fill" style="width: 78%;"></div></div>
+                                <span class="st-val">22.100 pas/h</span>
+                            </div>
+                            <div class="demand-bar-item">
+                                <span class="st-name">San Isidro</span>
+                                <div class="bar-bg"><div class="bar-fill" style="width: 65%;"></div></div>
+                                <span class="st-val">17.800 pas/h</span>
+                            </div>
+                            <div class="demand-bar-item">
+                                <span class="st-name">Tigre (Terminal)</span>
+                                <div class="bar-bg"><div class="bar-fill" style="width: 70%;"></div></div>
+                                <span class="st-val">19.500 pas/h</span>
+                            </div>
+                            <div class="demand-bar-item">
+                                <span class="st-name">J.L. Suárez</span>
+                                <div class="bar-bg"><div class="bar-fill" style="width: 60%;"></div></div>
+                                <span class="st-val">14.200 pas/h</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
