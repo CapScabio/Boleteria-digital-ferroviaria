@@ -22,7 +22,7 @@ El sistema elimina las filas de recarga, desmaterializa el pasaje, permite la co
 ## 🚀 Demo en Vivo
 
 🔗 **Desplegado en Vercel**: `https://boleteria-digital-ferroviaria.vercel.app` *(O en tu enlace de Vercel)*  
-💻 **Servidor Local**: `node server.js` (Disponible en `http://localhost:8080`)
+💻 **Servidor Local**: `node local_server.js` (Disponible en `http://localhost:8080`)
 
 ---
 
@@ -105,7 +105,7 @@ No requiere dependencias complejas ni bases de datos externas para la demostraci
 
 2. **Iniciar el servidor nativo Node.js**:
    ```bash
-   node server.js
+   node local_server.js
    ```
 
 3. **Abrir en el navegador**:

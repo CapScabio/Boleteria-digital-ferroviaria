@@ -1,0 +1,9 @@
+{
+  "name": "boleteria-digital-ferroviaria",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema Movil de Boletaje Digital Prepago - Linea Mitre",
+  "scripts": {
+    "start": "node local_server.js"
+  }
+}
