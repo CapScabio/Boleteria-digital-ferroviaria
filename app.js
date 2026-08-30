@@ -1,7 +1,7 @@
 /* ==========================================================================
    LÍNEA MITRE - SISTEMA DE BOLETAJE DIGITAL PREPAGO (AFC OPEN-LOOP)
    Application Logic & Cryptographic TOTP Engine
-   (Vercel & Multi-Browser Compatible)
+   (GPS Telemetry, Multi-Trip Tokens, Round-Trip & Partial Refunds)
    ========================================================================== */
 
 // 1. DATA: STATIONS & FARES FOR LÍNEA MITRE BRANCHES
@@ -65,6 +65,40 @@ const TICKET_TYPES_DATA = {
     estudiantil: { label: "ABONO ESTUDIANTIL / UNIV.", trips: 999, discount: 0.50 }
 };
 
+// Simulated Real-Time GPS Train Telemetry Data
+const GPS_FORMATIONS_DATA = [
+    {
+        id: "3021",
+        branch: "Retiro - Tigre",
+        speed: 52,
+        nextStation: "San Isidro C",
+        delayMinutes: 22,
+        status: "DEMORADO",
+        statusClass: "badge-yellow",
+        coords: "-34.4721, -58.5132"
+    },
+    {
+        id: "3045",
+        branch: "Retiro - J.L. Suárez",
+        speed: 0,
+        nextStation: "San Martín",
+        delayMinutes: 45,
+        status: "CANCELADO",
+        statusClass: "badge-red",
+        coords: "-34.5711, -58.5381"
+    },
+    {
+        id: "3088",
+        branch: "Retiro - B. Mitre",
+        speed: 64,
+        nextStation: "Belgrano R",
+        delayMinutes: 0,
+        status: "A TIEMPO",
+        statusClass: "badge-green",
+        coords: "-34.5622, -58.4590"
+    }
+];
+
 // Global Active State
 let currentTicket = null;
 let userTicketsList = [];
@@ -89,6 +123,7 @@ function safeUUID() {
 document.addEventListener("DOMContentLoaded", () => {
     initNavigationTabs();
     initPassengerForm();
+    initGpsTelemetry();
     initRefundsAndCertificates();
     initInspectorControls();
     updateLiveWatermarkClock();
@@ -114,14 +149,16 @@ function initNavigationTabs() {
 }
 
 // --------------------------------------------------------------------------
-// 3. PASSENGER FORM & FARE CALCULATOR (ABONOS & DISCOUNTS)
+// 3. PASSENGER FORM & FARE CALCULATOR (IDA Y VUELTA & ABONOS)
 // --------------------------------------------------------------------------
 function initPassengerForm() {
     const ticketTypeSelect = document.getElementById("ticket-type-select");
+    const roundtripToggle = document.getElementById("roundtrip-toggle");
     const branchSelect = document.getElementById("branch-select");
     const originSelect = document.getElementById("origin-select");
     const destSelect = document.getElementById("dest-select");
     const form = document.getElementById("ticket-form");
+    const btnConsumeTrip = document.getElementById("btn-consume-trip");
 
     function populateStations() {
         const branchKey = branchSelect.value;
@@ -162,16 +199,20 @@ function initPassengerForm() {
             section = 3;
         }
 
+        const isRoundTrip = roundtripToggle.checked;
+        const multiplier = isRoundTrip ? 2 : 1;
+
         const modeKey = ticketTypeSelect.value;
         const modeData = TICKET_TYPES_DATA[modeKey];
         
-        let rawTotal = singleFare * modeData.trips;
-        if (modeKey === 'estudiantil') rawTotal = singleFare * 30;
+        let rawTotal = singleFare * modeData.trips * multiplier;
+        if (modeKey === 'estudiantil') rawTotal = singleFare * 30 * multiplier;
 
         const discountPct = modeData.discount;
         const finalAmount = rawTotal * (1 - discountPct);
 
         document.getElementById("fare-dist").textContent = `${distKm} km (Sección ${section})`;
+        document.getElementById("fare-trip-type").textContent = isRoundTrip ? "Ida y Vuelta (2 tramos combinados)" : "Solo Ida (1 tramo)";
         document.getElementById("fare-discount-label").textContent = `${(discountPct * 100)}% de ahorro por anticipado`;
         document.getElementById("fare-amount").textContent = `$${finalAmount.toFixed(2)} ARS`;
     }
@@ -180,6 +221,7 @@ function initPassengerForm() {
     originSelect.addEventListener("change", calculateFare);
     destSelect.addEventListener("change", calculateFare);
     ticketTypeSelect.addEventListener("change", calculateFare);
+    roundtripToggle.addEventListener("change", calculateFare);
 
     populateStations();
 
@@ -193,6 +235,7 @@ function initPassengerForm() {
         const destName = destSelect.options[destSelect.selectedIndex].text;
         const modeKey = ticketTypeSelect.value;
         const modeData = TICKET_TYPES_DATA[modeKey];
+        const isRoundTrip = roundtripToggle.checked;
 
         if (origName === destName) {
             alert("Seleccione una estación de destino diferente a la de origen.");
@@ -200,12 +243,15 @@ function initPassengerForm() {
         }
 
         const fareText = document.getElementById("fare-amount").textContent;
+        const totalTrips = isRoundTrip ? (modeData.trips === 999 ? 999 : modeData.trips * 2) : modeData.trips;
 
         currentTicket = {
             uuid: safeUUID(),
             typeKey: modeKey,
-            typeLabel: modeData.label,
-            tripsRemaining: modeData.trips === 999 ? "Ilimitados (30 días)" : `${modeData.trips} viajes`,
+            typeLabel: `${modeData.label}${isRoundTrip ? ' (Ida y Vuelta)' : ''}`,
+            isRoundTrip: isRoundTrip,
+            totalTrips: totalTrips,
+            remainingTrips: totalTrips,
             branchKey: branchKey,
             branchName: branchName,
             origin: origName,
@@ -220,6 +266,37 @@ function initPassengerForm() {
         updateRefundDropdown();
         renderActiveTicket();
     });
+
+    // Handle Manual Trip Token Consumption (1 Trip Decrement)
+    btnConsumeTrip.addEventListener("click", () => {
+        if (!currentTicket || currentTicket.state !== "ACTIVE") {
+            alert("No hay un abono activo para validar.");
+            return;
+        }
+
+        if (currentTicket.remainingTrips === 999) {
+            alert("Abono Estudiantil ilimitado validado exitosamente para este tramo.");
+            updateTotpQR();
+            return;
+        }
+
+        if (currentTicket.remainingTrips > 1) {
+            currentTicket.remainingTrips -= 1;
+            document.getElementById("ticket-balance-display").textContent = `${currentTicket.remainingTrips} / ${currentTicket.totalTrips} viajes restantes`;
+            alert(`✅ Viaje validado con éxito. Te quedan ${currentTicket.remainingTrips} viajes en tu abono.`);
+            updateTotpQR();
+        } else if (currentTicket.remainingTrips === 1) {
+            currentTicket.remainingTrips = 0;
+            currentTicket.state = "USED";
+            document.getElementById("ticket-balance-display").textContent = `0 / ${currentTicket.totalTrips} viajes (AGOTADO)`;
+            document.getElementById("ticket-status-badge").className = "badge badge-red";
+            document.getElementById("ticket-status-badge").textContent = "AGOTADO";
+            alert("✅ Último viaje validado. Tu abono ha sido completado.");
+            updateTotpQR();
+        } else {
+            alert("El abono no posee más viajes disponibles.");
+        }
+    });
 }
 
 // --------------------------------------------------------------------------
@@ -232,9 +309,12 @@ async function renderActiveTicket() {
     document.getElementById("ticket-type-display").textContent = currentTicket.typeLabel;
     document.getElementById("ticket-orig-display").textContent = currentTicket.origin;
     document.getElementById("ticket-dest-display").textContent = currentTicket.destination;
+    document.getElementById("ticket-route-arrow").textContent = currentTicket.isRoundTrip ? "⇄" : "➔";
     document.getElementById("ticket-branch-display").textContent = currentTicket.branchName;
     document.getElementById("ticket-uuid-display").textContent = currentTicket.uuid.substring(0, 13) + "...";
-    document.getElementById("ticket-balance-display").textContent = currentTicket.tripsRemaining;
+    
+    const balanceStr = currentTicket.remainingTrips === 999 ? "Ilimitados (30 días)" : `${currentTicket.remainingTrips} / ${currentTicket.totalTrips} viajes restantes`;
+    document.getElementById("ticket-balance-display").textContent = balanceStr;
 
     if (totpInterval) clearInterval(totpInterval);
 
@@ -249,12 +329,13 @@ async function updateTotpQR() {
     const counter = Math.floor(nowSeconds / TOTP_PERIOD);
     const secondsRemaining = TOTP_PERIOD - (nowSeconds % TOTP_PERIOD);
 
-    const payloadRaw = `${currentTicket.uuid}|${counter}|${DEVICE_FINGERPRINT}`;
+    const payloadRaw = `${currentTicket.uuid}|${currentTicket.remainingTrips}|${counter}|${DEVICE_FINGERPRINT}`;
     const signature = await generateSHA256(payloadRaw + currentTicket.secretSeed);
     const shortSignature = signature.substring(0, 16);
 
     const qrPayload = JSON.stringify({
         t: currentTicket.uuid,
+        rem: currentTicket.remainingTrips,
         c: counter,
         sig: shortSignature,
         dev: DEVICE_FINGERPRINT
@@ -287,7 +368,6 @@ async function updateTotpQR() {
     }
 }
 
-// Visual QR Fallback if CDN is adblocked
 function renderFallbackQR(container, signature) {
     container.innerHTML = `
         <div style="display:flex; flex-direction:column; align-items:center; justify-center:center; width:180px; height:180px; background:#0d1117; color:#38bdf8; border-radius:12px; border:2px solid #2f81f7; padding:12px; box-sizing:border-box; text-align:center;">
@@ -300,7 +380,52 @@ function renderFallbackQR(container, signature) {
 }
 
 // --------------------------------------------------------------------------
-// 5. REFUNDS & OFFICIAL DELAY CERTIFICATE GENERATOR
+// 5. GPS TRAIN TELEMETRY MODULE
+// --------------------------------------------------------------------------
+function initGpsTelemetry() {
+    const container = document.getElementById("gps-trains-container");
+    if (!container) return;
+
+    container.innerHTML = "";
+    GPS_FORMATIONS_DATA.forEach(train => {
+        const card = document.createElement("div");
+        card.className = "gps-train-card";
+        card.innerHTML = `
+            <div class="train-id-name">
+                <span>🚆 Formación #${train.id}</span>
+                <span class="badge ${train.statusClass}">${train.status}</span>
+            </div>
+            <div class="train-loc-info">
+                <span>Ramal:</span> <strong>${train.branch}</strong><br>
+                <span>Próxima Estación:</span> <strong>${train.nextStation}</strong>
+            </div>
+            <div class="train-speed-badge">
+                Velocidad GPS: ${train.speed} km/h<br>
+                <small style="font-size:0.65rem; color:#8b949e;">${train.coords}</small>
+            </div>
+            <div style="text-align:right;">
+                <button class="btn btn-warning" onclick="selectGpsTrainRefund('${train.id}', '${train.delayMinutes}')" style="font-size:0.75rem; padding:0.4rem 0.8rem;">
+                    ⚠️ Solicitar Devolución Viaje
+                </button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function selectGpsTrainRefund(trainId, delayMins) {
+    const tabBtn = document.querySelector('[data-tab="refunds-tab"]');
+    if (tabBtn) tabBtn.click();
+
+    const formSelect = document.getElementById("refund-formation-select");
+    if (formSelect) formSelect.value = trainId;
+
+    const delayCertSelect = document.getElementById("cert-delay-minutes");
+    if (delayCertSelect) delayCertSelect.value = delayMins;
+}
+
+// --------------------------------------------------------------------------
+// 6. REFUNDS (1 TRIP RESTITUTION) & OFFICIAL CERTIFICATE GENERATOR
 // --------------------------------------------------------------------------
 function initRefundsAndCertificates() {
     const refundForm = document.getElementById("refund-form");
@@ -309,6 +434,7 @@ function initRefundsAndCertificates() {
     refundForm.addEventListener("submit", (e) => {
         e.preventDefault();
         const ticketSelect = document.getElementById("refund-ticket-select");
+        const formationSelect = document.getElementById("refund-formation-select");
         const ticketUuid = ticketSelect.value;
 
         if (!ticketUuid) {
@@ -318,17 +444,18 @@ function initRefundsAndCertificates() {
 
         const targetTicket = userTicketsList.find(t => t.uuid === ticketUuid);
         if (targetTicket) {
-            targetTicket.state = "REFUNDED";
+            if (targetTicket.remainingTrips !== 999) {
+                targetTicket.remainingTrips += 1; // Restores 1 trip credit to the active pass
+            }
+            targetTicket.state = "ACTIVE";
             
             if (currentTicket && currentTicket.uuid === targetTicket.uuid) {
-                currentTicket.state = "REFUNDED";
-                document.getElementById("ticket-status-badge").className = "badge badge-red";
-                document.getElementById("ticket-status-badge").textContent = "REEMBOLSADO";
+                renderActiveTicket();
             }
         }
 
         const refundBox = document.getElementById("refund-status-box");
-        document.getElementById("refund-status-text").textContent = `Se ha procesado exitosamente la devolución de ${targetTicket ? targetTicket.amountPaid : '$480,00 ARS'} a tu billetera de origen.`;
+        document.getElementById("refund-status-text").textContent = `Se ha restituido exitosamente 1 crédito de viaje a tu abono por la afectación verificada en la Formación #${formationSelect.value}.`;
         refundBox.classList.remove("hidden");
 
         const kpiRefunds = document.getElementById("kpi-refunds-count");
@@ -347,7 +474,7 @@ function initRefundsAndCertificates() {
 
         if (currentTicket) {
             document.getElementById("cert-out-branch").textContent = currentTicket.branchName;
-            document.getElementById("cert-out-route").textContent = `${currentTicket.origin} ➔ ${currentTicket.destination}`;
+            document.getElementById("cert-out-route").textContent = `${currentTicket.origin} ${currentTicket.isRoundTrip ? '⇄' : '➔'} ${currentTicket.destination}`;
         }
 
         const d = new Date();
@@ -356,7 +483,7 @@ function initRefundsAndCertificates() {
         if (delayVal === "cancelled") {
             document.getElementById("cert-out-status").textContent = "FORMACIÓN CANCELADA (SIN SERVICIO)";
         } else {
-            document.getElementById("cert-out-status").textContent = `DEMORA REGISTRADA DE ${delayVal} MINUTOS (FORMACIÓN #3021)`;
+            document.getElementById("cert-out-status").textContent = `DEMORA GPS REGISTRADA DE ${delayVal} MINUTOS (FORMACIÓN #3021)`;
         }
 
         const hashCert = "SHA256-SOFSE-" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -389,7 +516,7 @@ function updateRefundDropdown() {
     const refundSelect = document.getElementById("refund-ticket-select");
     refundSelect.innerHTML = "";
 
-    const activeTickets = userTicketsList.filter(t => t.state === "ACTIVE");
+    const activeTickets = userTicketsList.filter(t => t.remainingTrips > 0 || t.remainingTrips === 999);
 
     if (activeTickets.length === 0) {
         const opt = document.createElement("option");
@@ -400,7 +527,7 @@ function updateRefundDropdown() {
         activeTickets.forEach(t => {
             const opt = document.createElement("option");
             opt.value = t.uuid;
-            opt.textContent = `${t.typeLabel} - ${t.origin} ➔ ${t.destination} (${t.amountPaid})`;
+            opt.textContent = `${t.typeLabel} - ${t.origin} ➔ ${t.destination} (Saldo: ${t.remainingTrips} viajes)`;
             refundSelect.appendChild(opt);
         });
     }
@@ -419,7 +546,6 @@ async function generateSHA256(str) {
             // Fallback Hash
         }
     }
-    // Simple FNV-1a 32-bit hash fallback for non-crypto contexts
     let hash = 0x811c9dc5;
     for (let i = 0; i < str.length; i++) {
         hash ^= str.charCodeAt(i);
@@ -438,7 +564,7 @@ function updateLiveWatermarkClock() {
 }
 
 // --------------------------------------------------------------------------
-// 6. INSPECTOR SCANNER SIMULATOR
+// 7. INSPECTOR SCANNER SIMULATOR
 // --------------------------------------------------------------------------
 function initInspectorControls() {
     const btnScanCurrent = document.getElementById("btn-scan-current");
@@ -467,15 +593,15 @@ async function validateTicketScan(scenario) {
             return;
         }
 
-        if (currentTicket.state === "REFUNDED") {
+        if (currentTicket.remainingTrips === 0) {
             resultBox.className = "result-display invalid";
             resultIcon.textContent = "🚫";
-            resultTitle.textContent = "PASAJE REEMBOLSADO";
-            resultDetail.textContent = "El pasaje fue anulado por solicitud de devolución previa.";
+            resultTitle.textContent = "ABONO SIN SALDO / AGOTADO";
+            resultDetail.textContent = "El abono no posee más viajes disponibles.";
             resultBadge.className = "badge badge-red";
-            resultBadge.textContent = "ANULADO / DEVOLUCIÓN";
-            document.getElementById("audit-server-state").textContent = "INACTIVO (State: REFUNDED)";
-            document.getElementById("audit-hmac-match").textContent = "N/A (Boleto Reembolsado)";
+            resultBadge.textContent = "AGOTADO / SIN SALDO";
+            document.getElementById("audit-server-state").textContent = "INACTIVO (State: EXHAUSTED)";
+            document.getElementById("audit-hmac-match").textContent = "N/A (Sin saldo)";
             document.getElementById("audit-time-skew").textContent = "N/A";
             document.getElementById("audit-mode").textContent = isOffline ? "LOCAL (CRYPTOGRAPHIC OFFLINE)" : "ONLINE (REDIS CLUSTER)";
             return;
@@ -484,12 +610,12 @@ async function validateTicketScan(scenario) {
         resultBox.className = "result-display valid";
         resultIcon.textContent = "✅";
         resultTitle.textContent = "PASAJE / ABONO VÁLIDO";
-        resultDetail.textContent = `Modalidad: ${currentTicket.typeLabel} | ${currentTicket.origin} ➔ ${currentTicket.destination} (${currentTicket.branchName})`;
+        resultDetail.textContent = `Modalidad: ${currentTicket.typeLabel} | Saldo: ${currentTicket.remainingTrips} viajes | ${currentTicket.origin} ➔ ${currentTicket.destination} (${currentTicket.branchName})`;
         
         resultBadge.className = "badge badge-green";
         resultBadge.textContent = "VERIFICADO (PAGO OK)";
 
-        document.getElementById("audit-server-state").textContent = "ACTIVO (State: ACTIVE)";
+        document.getElementById("audit-server-state").textContent = `ACTIVO (Saldo: ${currentTicket.remainingTrips} viajes)`;
         document.getElementById("audit-hmac-match").textContent = "VERIFICADA OK (SHA256 Match)";
         document.getElementById("audit-time-skew").textContent = "Diferencia: 0s (Counter C±0)";
         document.getElementById("audit-mode").textContent = isOffline ? "LOCAL (CRYPTOGRAPHIC OFFLINE)" : "ONLINE (REDIS CLUSTER)";

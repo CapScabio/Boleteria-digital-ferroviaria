@@ -30,7 +30,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>LÍNEA MITRE</h1>
-                    <span>Boletaje Digital Prepago • Abonos • TOTP Security</span>
+                    <span>Boletaje Digital • GPS Telemetría • Abonos • TOTP</span>
                 </div>
             </div>
 
@@ -38,6 +38,10 @@
                 <button class="nav-btn active" data-tab="passenger-tab">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                     Comprar Pasaje / Abonos
+                </button>
+                <button class="nav-btn" data-tab="gps-tab">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                    GPS Formaciones (Vivo)
                 </button>
                 <button class="nav-btn" data-tab="refunds-tab">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
@@ -57,7 +61,7 @@
         <!-- Main Workspace Body -->
         <main class="main-content">
             
-            <!-- SECTION 1: PASSENGER VIEW (PURCHASE SINGLE & ABONOS) -->
+            <!-- SECTION 1: PASSENGER VIEW (PURCHASE SINGLE & ABONOS + IDA Y VUELTA) -->
             <section id="passenger-tab" class="tab-panel active">
                 <div class="passenger-grid">
                     
@@ -76,8 +80,16 @@
                                     <option value="semanal">📅 Abono Semanal (10 viajes • 10% Descuento)</option>
                                     <option value="mensual">🗓️ Abono Mensual (40 viajes • 25% Descuento)</option>
                                     <option value="trimestral">🏆 Abono Trimestral (120 viajes • 40% Descuento)</option>
-                                    <option value="estudiantil">🎓 Abono Estudiantil / Universitario (50% Descuento)</option>
+                                    <option value="estudiantil">🎓 Abono Estudiantil / Univ. (50% Descuento)</option>
                                 </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="switch-label roundtrip-box">
+                                    <input type="checkbox" id="roundtrip-toggle">
+                                    <span class="slider"></span>
+                                    <strong>Modalidad "Ida y Vuelta" (Boleto Combinado de 2 Tramo)</strong>
+                                </label>
                             </div>
 
                             <div class="form-group">
@@ -119,6 +131,10 @@
                                     <strong id="fare-dist">0 km (0 secciones)</strong>
                                 </div>
                                 <div class="fare-item">
+                                    <span>Tipo de Viaje:</span>
+                                    <strong id="fare-trip-type" class="text-blue">Solo Ida (1 tramo)</strong>
+                                </div>
+                                <div class="fare-item">
                                     <span>Descuento Aplicado:</span>
                                     <strong id="fare-discount-label" class="text-green">0% (Ninguno)</strong>
                                 </div>
@@ -152,7 +168,7 @@
                                 <div class="ticket-type-tag" id="ticket-type-display">BOLETO ÚNICO</div>
                                 <div class="ticket-route">
                                     <span id="ticket-orig-display">Retiro</span>
-                                    <span class="route-arrow">➔</span>
+                                    <span class="route-arrow" id="ticket-route-arrow">➔</span>
                                     <span id="ticket-dest-display">Tigre</span>
                                 </div>
                                 <div class="ticket-branch-sub" id="ticket-branch-display">Ramal Retiro - Tigre</div>
@@ -177,18 +193,22 @@
 
                             <div class="ticket-meta">
                                 <div class="meta-row">
-                                    <span>UUID Pasaje:</span>
+                                    <span>UUID Abono Maestro:</span>
                                     <code id="ticket-uuid-display">a1b2c3d4...</code>
                                 </div>
                                 <div class="meta-row">
-                                    <span>Saldo / Viajes Restantes:</span>
+                                    <span>Saldo de Viajes Restantes:</span>
                                     <strong id="ticket-balance-display" class="text-green">1 / 1 viaje</strong>
                                 </div>
                                 <div class="meta-row">
-                                    <span>Firma Criptográfica:</span>
+                                    <span>Firma Criptográfica Actual:</span>
                                     <code id="ticket-hash-display">0x8F92...</code>
                                 </div>
                             </div>
+
+                            <button id="btn-consume-trip" class="btn btn-success btn-block" style="margin-top: 0.5rem;">
+                                📍 Simular Consumo de 1 Viaje (Validar Tramo)
+                            </button>
                         </div>
 
                     </div>
@@ -196,51 +216,79 @@
                 </div>
             </section>
 
-            <!-- SECTION 2: REFUNDS & OFFICIAL DELAY CERTIFICATES -->
+            <!-- SECTION 2: LIVE GPS TRAIN TRACKING & TELEMETRY -->
+            <section id="gps-tab" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📡 Telemetría GPS de Formaciones en Tiempo Real (GTFS-R)</h2>
+                        <span class="badge badge-blue">Monitoreo Satelital Línea Mitre</span>
+                    </div>
+                    <p class="section-desc">
+                        Coordinación en tiempo real de trenes en circulación. El sistema sincroniza las coordenadas GPS para validar automáticamente reclamos de demoras y expedir justificantes oficiales.
+                    </p>
+
+                    <div class="gps-radar-box">
+                        <div class="gps-radar-header">
+                            <div class="live-dot-container"><span class="live-dot"></span> EN VIVO</div>
+                            <span>Red Ferroviaria Línea Mitre • 3 Formaciones en Monitoreo</span>
+                        </div>
+
+                        <div class="gps-trains-list" id="gps-trains-container">
+                            <!-- Dynamically injected active formations -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: REFUNDS & OFFICIAL DELAY CERTIFICATES -->
             <section id="refunds-tab" class="tab-panel">
                 <div class="passenger-grid">
                     
                     <!-- Left: Refund Request Form -->
                     <div class="card">
                         <div class="card-header">
-                            <h2>💸 Devolución Automática de Pasaje</h2>
-                            <span class="badge badge-yellow">Garantía de Servicio</span>
+                            <h2>💸 Devolución de Viaje por Falla de Servicio</h2>
+                            <span class="badge badge-yellow">Garantía por Formación</span>
                         </div>
                         <p class="section-desc">
-                            Si tu formación se canceló o sufrió un atraso superior a 15 minutos, solicita la restitución inmediata del 100% del importe abonado a tu billetera virtual.
+                            Si tu formación sufrió una demora superior a 15 minutos o una cancelación verificada por GPS, solicita la devolución o restitución del crédito del viaje específico de esa formación.
                         </p>
 
                         <form id="refund-form" style="margin-top: 1rem;">
                             <div class="form-group">
-                                <label for="refund-ticket-select">Seleccionar Pasaje o Abono Afectado</label>
+                                <label for="refund-ticket-select">Seleccionar Pasaje / Abono para Reembolsar 1 Viaje</label>
                                 <select id="refund-ticket-select" class="form-control">
                                     <option value="">-- No hay pasajes activos para solicitar reembolso --</option>
                                 </select>
                             </div>
 
                             <div class="form-group">
+                                <label for="refund-formation-select">Formación Afectada (Verificada por GPS)</label>
+                                <select id="refund-formation-select" class="form-control">
+                                    <option value="3021">Formación #3021 (Demora registrada de 22 min en San Isidro)</option>
+                                    <option value="3045">Formación #3045 (Servicio Cancelado en San Martín)</option>
+                                    <option value="3088">Formación #3088 (Demora registrada de 18 min en Belgrano R)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
                                 <label for="refund-reason-select">Motivo de la Solicitud</label>
                                 <select id="refund-reason-select" class="form-control">
-                                    <option value="delay">⏱️ Demora de formación mayor a 15 minutos</option>
+                                    <option value="delay">⏱️ Demora de formación mayor a 15 minutos (GPS Confirmed)</option>
                                     <option value="cancelled">🚫 Cancelación total del servicio en ramal</option>
                                     <option value="strike">⚠️ Medida de fuerza / Cierre de estación</option>
                                 </select>
                             </div>
 
-                            <div class="form-group">
-                                <label for="refund-comments">Observaciones (Opcional)</label>
-                                <input type="text" id="refund-comments" class="form-control" placeholder="Ej: Varado en Estación San Isidro a las 18:30 hs">
-                            </div>
-
                             <button type="submit" class="btn btn-warning btn-block" id="btn-submit-refund">
-                                🔄 Procesar Reembolso Inmediato (100%)
+                                🔄 Restituir Crédito del Viaje / Reembolso Parcial
                             </button>
                         </form>
 
                         <div id="refund-status-box" class="refund-result-box hidden">
                             <div class="refund-status-icon">✨</div>
-                            <h4>Devolución Aprobada e Integrada</h4>
-                            <p id="refund-status-text">Se han reintegrado $480,00 ARS a tu billetera de origen.</p>
+                            <h4>Devolución de Viaje Aprobada por GPS</h4>
+                            <p id="refund-status-text">Se ha restituido 1 crédito de viaje a tu abono activo.</p>
                         </div>
                     </div>
 
@@ -251,7 +299,7 @@
                             <span class="badge badge-purple">Validez Laboral / Escolar</span>
                         </div>
                         <p class="section-desc">
-                            Genera un certificado digital con firma institucional comprobable mediante QR para presentar en tu trabajo, universidad o escuela cuando el tren se atrase más de 15 minutos.
+                            Genera un certificado digital firmado institucionalmente para presentar en tu trabajo o estudio cuando la formación registre atrasos superiores a 15 minutos.
                         </p>
 
                         <div class="certificate-form-box" style="margin-top: 1rem;">
@@ -267,10 +315,10 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="cert-delay-minutes">Minutos de Atraso Registrados</label>
+                                    <label for="cert-delay-minutes">Formación y Demora GPS Registrada</label>
                                     <select id="cert-delay-minutes" class="form-control">
-                                        <option value="25">25 Minutos de Atraso (Formación #3021)</option>
-                                        <option value="45">45 Minutos de Atraso (Formación #3045)</option>
+                                        <option value="22">22 Minutos de Atraso (Formación #3021 • San Isidro)</option>
+                                        <option value="45">45 Minutos de Atraso (Formación #3045 • San Martín)</option>
                                         <option value="cancelled">Formación Cancelada (Sin Servicio)</option>
                                     </select>
                                 </div>
@@ -298,8 +346,8 @@
                                     <div><strong>DNI:</strong> <span id="cert-out-dni">38.912.401</span></div>
                                     <div><strong>Ramal Afectado:</strong> <span id="cert-out-branch">Retiro - Tigre</span></div>
                                     <div><strong>Tramo:</strong> <span id="cert-out-route">Retiro ➔ Tigre</span></div>
-                                    <div><strong>Fecha y Hora:</strong> <span id="cert-out-datetime">23/08/2026 19:15 hs</span></div>
-                                    <div><strong>Novedad Operativa:</strong> <strong id="cert-out-status" class="text-red">Demora registrada de 25 minutos</strong></div>
+                                    <div><strong>Fecha y Hora:</strong> <span id="cert-out-datetime">30/08/2026 14:55 hs</span></div>
+                                    <div><strong>Novedad Operativa GPS:</strong> <strong id="cert-out-status" class="text-red">Demora registrada de 22 minutos</strong></div>
                                 </div>
                                 <p class="cert-legal-text">
                                     El presente documento se expide a solicitud del interesado para ser presentado ante las autoridades laborales, académicas o institucionales que lo requieran (`Art. 14 Ley de Transporte`).
@@ -322,7 +370,7 @@
                 </div>
             </section>
 
-            <!-- SECTION 3: INSPECTOR / ON-BOARD PATROL VIEW -->
+            <!-- SECTION 4: INSPECTOR / ON-BOARD PATROL VIEW -->
             <section id="inspector-tab" class="tab-panel">
                 <div class="inspector-grid">
                     
@@ -395,7 +443,7 @@
                 </div>
             </section>
 
-            <!-- SECTION 4: OPERATOR DASHBOARD VIEW -->
+            <!-- SECTION 5: OPERATOR DASHBOARD VIEW -->
             <section id="dashboard-tab" class="tab-panel">
                 <div class="dashboard-grid">
                     
@@ -409,13 +457,13 @@
                         <div class="kpi-card">
                             <div class="kpi-title">Pasajes & Abonos Emitidos</div>
                             <div class="kpi-value" id="kpi-tickets-count">1.642.190</div>
-                            <div class="kpi-sub">Incluye 38% de abonos con descuento</div>
+                            <div class="kpi-sub">Incluye 42% abonos Ida y Vuelta</div>
                         </div>
 
                         <div class="kpi-card">
-                            <div class="kpi-title">Solicitudes de Devolución Reintegradas</div>
+                            <div class="kpi-title">Reembolsos de Viaje (GPS Verified)</div>
                             <div class="kpi-value text-yellow" id="kpi-refunds-count">142</div>
-                            <div class="kpi-sub">Reembolso 100% automático por demoras</div>
+                            <div class="kpi-sub">Restitución de 1 crédito por formación</div>
                         </div>
 
                         <div class="kpi-card">

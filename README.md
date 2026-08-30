@@ -29,19 +29,20 @@ El sistema elimina las filas de recarga, desmaterializa el pasaje, permite la co
 
 ## ✨ Funcionalidades Principales
 
-### 1. 🎟️ Modo Pasajero: Boleto Único y Abonos Prepago
-* **Cálculo Automático de Tarifa por Sección**: Retiro-Tigre, Retiro-J.L. Suárez y Retiro-B. Mitre (12 km, 24 km, >24 km).
+### 1. 🎟️ Modo Pasajero: Boleto Único, Ida y Vuelta y Abonos Prepago
+* **Cálculo Automático por Sección y Sentido**: Retiro-Tigre, Retiro-J.L. Suárez y Retiro-B. Mitre.
+* **Modalidad "Ida y Vuelta" (Round-Trip)**: Emisión de pasajes combinados de 2 tramos.
 * **Descuentos Progresivos por Precompra**:
   * 🎟️ *Boleto Único / Ocasional* (Tarifa base)
   * 📅 *Abono Semanal (10 viajes)*: **10% Descuento**
-  * 🗓️ *Abono Mensual (40 viajes)*: **25% Descuento**
+  * 🗓️ *Abono Mensual (40 viajes)*: **25% Descuento** (Consumo de a 1 token de viaje por validación)
   * 🏆 *Abono Trimestral (120 viajes)*: **40% Descuento**
   * 🎓 *Abono Estudiantil / Universitario*: **50% Descuento**
-* **Token Criptográfico TOTP**: Código QR dinámico que rota cada 15 segundos con marca de agua temporal en pantalla para impedir evasión por captura de pantalla (*screenshot*) o reenvío.
+* **Token Criptográfico TOTP Incremental**: Código QR dinámico que rota cada 15 segundos y decrementa de a 1 viaje en cada escaneo.
 
-### 2. 💸 Devoluciones Automáticas por Fallas de Servicio
-* **Garantía de Servicio**: Si la formación sufre demoras mayores a 15 minutos o una cancelación total, el pasajero puede solicitar la restitución inmediata del **100% del importe** a su billetera virtual.
-* **Anulación Inmediata**: Al aprobarse el reembolso, el token criptográfico se invalida en tiempo real en los dispositivos de inspección.
+### 2. 📡 Telemetría GPS de Formaciones en Tiempo Real (GTFS-R)
+* **Monitoreo Satelital**: Mapa de seguimiento en vivo con posición, velocidad (km/h) y estado operativo de las formaciones.
+* **Devolución Parcial por Formación Afectada**: Si un tren registra demoras > 15 min o cancelación en el GPS, se restituye **1 crédito de viaje** al abono de la formación afectada sin anular el resto del abono mensual.
 
 ### 3. 📜 Certificado Digital Institucional de Demora / Cancelación
 * **Validez Laboral y Académica**: Genera un certificado impreso/PDF con sello de **Trenes Argentinos (SOFSE - Línea Mitre)**.

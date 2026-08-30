@@ -1,6 +1,6 @@
 /* ==========================================================================
    LÍNEA MITRE - SISTEMA DE BOLETAJE DIGITAL PREPAGO (AFC OPEN-LOOP)
-   Design System & Styling (Abonos, Devoluciones y Certificados)
+   Design System & Styling (Ida y Vuelta, GPS Formaciones y Reembolso por Viaje)
    ========================================================================== */
 
 :root {
@@ -242,6 +242,13 @@ label {
     background: #111827;
 }
 
+.roundtrip-box {
+    background: rgba(47, 129, 247, 0.1);
+    border: 1px solid rgba(47, 129, 247, 0.25);
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+}
+
 /* Fare Summary Box */
 .fare-summary {
     background: rgba(13, 17, 23, 0.7);
@@ -464,6 +471,100 @@ label {
 .meta-row code {
     font-family: monospace;
     color: var(--accent-cyan);
+}
+
+/* GPS Telemetry Section */
+.gps-radar-box {
+    margin-top: 1rem;
+    background: rgba(13, 17, 23, 0.8);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 1.25rem;
+}
+
+.gps-radar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.live-dot-container {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--accent-green-bright);
+    font-weight: 800;
+    font-size: 0.75rem;
+}
+
+.live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-green-bright);
+    box-shadow: 0 0 10px var(--accent-green-bright);
+    animation: blink 1.2s infinite ease-in-out;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.8); }
+}
+
+.gps-trains-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.gps-train-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1.2fr;
+    align-items: center;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .gps-train-card {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+}
+
+.train-id-name {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.train-loc-info {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.train-loc-info strong { color: var(--text-primary); }
+
+.train-speed-badge {
+    font-family: monospace;
+    font-size: 0.8rem;
+    background: rgba(47, 129, 247, 0.15);
+    color: var(--accent-cyan);
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    display: inline-block;
+    text-align: center;
 }
 
 /* Refund Section Styles */
